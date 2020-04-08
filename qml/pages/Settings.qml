@@ -1,15 +1,17 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 
-Page {
+Dialog {
     id: page
 
     // The effective value will be restricted by ApplicationWindow.allowedOrientations
     allowedOrientations: Orientation.All
-
     Column {
         id: listView
         anchors.fill: parent
+	DialogHeader {
+        }
+
         PageHeader {
             title: qsTr("Settings")
         }
@@ -21,11 +23,8 @@ Page {
             width: parent.width
         }
     }
-    onStatusChanged: {
-        if(status === PageStatus.Deactivating)
-        {
-            configAddress.value = deviceAddr.text;
-            configAddress.sync();
-        }
+    onAccepted: {
+        configAddress.value = deviceAddr.text;
+        configAddress.sync();
     }
 }
