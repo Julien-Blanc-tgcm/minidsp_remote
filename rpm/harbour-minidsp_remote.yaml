@@ -1,6 +1,6 @@
 Name: harbour-minidsp_remote
 Summary: Application to control MiniDSP nanoavr product
-Version: 1.0
+Version: 1.1
 Release: 1
 # The contents of the Group field should be one of the groups listed here:
 # https://github.com/mer-tools/spectacle/blob/master/data/GROUPS
@@ -12,7 +12,7 @@ License: LICENSE
 Sources:
 - '%{name}-%{version}.tar.bz2'
 Description: |
-  Short description of my Sailfish OS Application
+  A remote control app for minidsp nanoavr products
 Configure: none
 Builder: qmake5
 
