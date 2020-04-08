@@ -65,6 +65,12 @@ public:
 	 * @return
 	 */
 	static Message deviceInformationQuery();
+
+	/**
+	 * @brief returns the command this message is. Allows inspecting a command before it is being sent
+	 * @return 
+	 */
+	static Commands queryCommand(Message const& message);
 };
 
 }

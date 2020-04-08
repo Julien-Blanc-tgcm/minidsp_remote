@@ -202,6 +202,11 @@ Query::Message Query::deviceInformationQuery()
 	return data;
 }
 
+Commands Query::queryCommand(Message const& msg)
+{
+	return static_cast<Commands>(msg[1]);
+}
+
 }
 }
 }
