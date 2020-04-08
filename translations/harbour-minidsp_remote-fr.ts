@@ -115,17 +115,17 @@
 <context>
     <name>Settings</name>
     <message>
-        <location filename="../qml/pages/Settings.qml" line="14"/>
+        <location filename="../qml/pages/Settings.qml" line="16"/>
         <source>Settings</source>
         <translation>Paramètres</translation>
     </message>
     <message>
-        <location filename="../qml/pages/Settings.qml" line="17"/>
+        <location filename="../qml/pages/Settings.qml" line="19"/>
         <source>Device address</source>
         <translation>Adresse IP du périphérique</translation>
     </message>
     <message>
-        <location filename="../qml/pages/Settings.qml" line="19"/>
+        <location filename="../qml/pages/Settings.qml" line="21"/>
         <source>Enter the address of the device</source>
         <translation>Entrez l’adresse IP du périphérique</translation>
     </message>

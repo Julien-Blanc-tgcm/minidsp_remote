@@ -13,9 +13,11 @@ namespace minidsp_remote
 {
 
 NanoAVRClient::NanoAVRClient(QObject* parent) : QObject{parent},
-    device_{new NanoAVRBasicSettings{this}}
+    device_{new NanoAVRBasicSettings{this}},
+    timer_{new QTimer{this}}
 {
-
+	connect(timer_, &QTimer::timeout, this, &NanoAVRClient::timerElapsed_);
+	timer_->setSingleShot(true);
 }
 
 QString NanoAVRClient::address() const
@@ -71,7 +73,7 @@ void NanoAVRClient::setVolume(int volume)
 	if(connectionStatus() == 2 && volume > -256 && volume <= 0)
 	{
 		auto ret = minidsp::Query::changeVolumeQuery(volume);
-		socket_->write(reinterpret_cast<char const*>(ret.data()), ret.size());
+		executeNextQuery_(ret);
 	}
 }
 
@@ -81,17 +83,18 @@ void NanoAVRClient::setHdmiInput(int input)
 	{
 		auto ret = minidsp::Query::switchHdmiInputQuery(static_cast<minidsp::HDMIInput>(input - 1));
 		pendingHdmiInput_ = input;
-		socket_->write(reinterpret_cast<char const*>(ret.data()), ret.size());
+		executeNextQuery_(ret);
 	}
 }
 
 void NanoAVRClient::setEqualizerPreset(int preset)
 {
-	if(connectionStatus() == 2 && preset > 0 && preset < 5)
+	if(connectionStatus() == 2 && preset > 0 && preset < 5 &&
+	        preset != device()->currentPreset())
 	{
 		auto ret = minidsp::Query::switchEQPresetQuery(static_cast<minidsp::EQPreset>(preset - 1));
 		pendingPreset_ = preset;
-		socket_->write(reinterpret_cast<char const*>(ret.data()), ret.size());
+		executeNextQuery_(ret);
 	}
 }
 
@@ -101,7 +104,7 @@ void NanoAVRClient::setMute(bool mute)
 	{
 		auto ret = minidsp::Query::muteQuery(mute);
 		pendingMuted_ = mute;
-		socket_->write(reinterpret_cast<char const*>(ret.data()), ret.size());
+		executeNextQuery_(ret);
 	}
 }
 
@@ -157,7 +160,64 @@ void NanoAVRClient::readInformation_()
 {
 	auto q = minidsp::Query::deviceInformationQuery();
 	//(void)q;
-	socket_->write(reinterpret_cast<char const*>(q.data()), q.size());
+	executeNextQuery_(q);
+}
+
+void NanoAVRClient::executeNextQuery_(minidsp::Query::Message const& message)
+{
+	if(timer_->isActive())
+	{
+		addPendingQuery_(message);
+	}
+	else if(pendingQueries_.size() > 0) // should not happen, but in case...
+	{
+		addPendingQuery_(message);
+		restartTimer_();
+		auto query = pendingQueries_.front();
+		pendingQueries_.erase(pendingQueries_.begin());
+		executeQuery_(query);
+	}
+	else
+	{
+		restartTimer_();
+		executeQuery_(message);
+	}
+}
+
+void NanoAVRClient::restartTimer_()
+{
+	timer_->start(/*std::chrono::milliseconds{ */100 /*}*/);
+}
+
+void NanoAVRClient::executeQuery_(minidsp::Query::Message const& message)
+{
+	socket_->write(reinterpret_cast<char const*>(message.data()), message.size());
+}
+
+void NanoAVRClient::timerElapsed_()
+{
+	if(pendingQueries_.size() > 0) // execute the next pending query
+	{
+		restartTimer_();
+		auto query = pendingQueries_.front();
+		pendingQueries_.erase(pendingQueries_.begin());
+		executeQuery_(query);
+	}
+	// else queue empty, nothing to do
+}
+
+void NanoAVRClient::addPendingQuery_(minidsp::Query::Message const& message)
+{
+	for(auto it = pendingQueries_.begin(); it != pendingQueries_.end(); /*iterator increment inside loop body*/)
+	{
+		if(minidsp::Query::queryCommand(message) == minidsp::Query::queryCommand(*it))
+		{
+			it = pendingQueries_.erase(it);
+		}
+		else
+			++it;
+	}
+	pendingQueries_.push_back(message);
 }
 
 }

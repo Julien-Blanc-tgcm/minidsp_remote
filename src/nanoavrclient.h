@@ -1,11 +1,14 @@
 #ifndef NANOAVRCLIENT_H
 #define NANOAVRCLIENT_H
 
-#include <QObject>
+#include "nanoavrbasicsettings.h"
 
 #include <QAbstractSocket>
+#include <QObject>
+#include <QTimer>
+#include <QVector>
 
-#include "nanoavrbasicsettings.h"
+#include <query.h>
 
 class QTcpSocket;
 
@@ -23,6 +26,7 @@ class NanoAVRClient : public QObject
 	Q_PROPERTY(QString address READ address WRITE setAddress NOTIFY addressChanged)
 	Q_PROPERTY(int connectionStatus READ connectionStatus WRITE setConnectionStatus NOTIFY connectionStatusChanged)
 	Q_PROPERTY(NanoAVRBasicSettings* device READ device NOTIFY deviceChanged)
+
 	QString address_;
 
 	int connectionStatus_;
@@ -30,6 +34,17 @@ class NanoAVRClient : public QObject
 	NanoAVRBasicSettings* device_;
 
 	QTcpSocket* socket_ = nullptr;
+
+	/**
+	 * Rate limit timer, used to limit the number of queries per second we send to the device
+	 */
+	QTimer* timer_ = nullptr;
+
+	/**
+	 * Stores the pending queries, because we don't want to stress the device, sending it too many queries.
+	 * We limit to 1 query every 100ms
+	 */
+	QVector<minidsp::Query::Message> pendingQueries_;
 
 public:
 	NanoAVRClient(QObject* parent = nullptr);
@@ -79,12 +94,35 @@ private slots:
 	void consumeRead_();
 	void cannotConnect_(QAbstractSocket::SocketError);
 
+	void timerElapsed_();
+
 private:
 	void readInformation_();
 
 	int pendingHdmiInput_;
 	int pendingPreset_;
 	bool pendingMuted_;
+
+	/**
+	 * Execute the given query, or add it to the list of pending queries, depending on the current
+	 * state of the rate limiter
+	 */
+	void executeNextQuery_(minidsp::Query::Message const& message);
+	/**
+	 * Restart the rate limiter timer
+	 */
+	void restartTimer_();
+	/**
+	 * Execute the query (should be called only by the timer event and executeNextQuery_
+	 */
+	void executeQuery_(minidsp::Query::Message const& message);
+
+	/**
+	 * Adds a query to the pending list. Merge similar queries together
+	 * (ie, will only send a single volume change query for multiple pending
+	 * changes). Should only be called by executeNextQuery_
+	 */
+	void addPendingQuery_(minidsp::Query::Message const& message);
 };
 
 }
